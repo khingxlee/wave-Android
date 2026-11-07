@@ -1,0 +1,52 @@
+name: Build APK
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: write
+env:
+  KS_B64: ${{ secrets.KEYSTORE_BASE64 }}
+  KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+  KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+  KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Prepare release keystore
+        if: env.KS_B64 != ''
+        shell: bash
+        run: |
+          echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+      - name: Build APKs
+        shell: bash
+        run: gradle assembleDebug assembleRelease --no-daemon --console=plain 2>&1 | tee build.log
+      - name: Show build errors
+        if: failure()
+        shell: bash
+        run: |
+          grep -E '^e: |error:|What went wrong|Execution failed|AAPT|Could not' -A1 build.log | head -8 | while IFS= read -r l; do echo "::error::${l}"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TempoShift-apk
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
+      - name: Publish APKs to Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest-build
+          name: TempoShift latest build
+          files: |
+            app/build/outputs/apk/debug/app-debug.apk
+            app/build/outputs/apk/release/app-release.apk
