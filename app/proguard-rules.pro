@@ -1,0 +1,12 @@
+# TempoShift release (R8) rules
+-keep class app.temposhift.** { *; }
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.mlkit.**
+-dontwarn org.checkerframework.**
+-dontwarn javax.annotation.**
+-dontwarn com.google.errorprone.annotations.**
+-dontwarn okhttp3.**
+-dontwarn okio.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
